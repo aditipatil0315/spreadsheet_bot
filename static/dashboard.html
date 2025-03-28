@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Data Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: url('financial-background.jpg');
+            background-size: cover;
+            background-position: center;
+            color: #1a202c;
+        }
+        .container {
+            backdrop-filter: blur(15px);
+            border-radius: 1rem;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            padding: 2rem;
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            display: flex; /* Added for button alignment */
+            justify-content: space-between; /* Added for button alignment */
+            align-items: center; /* Vertically center items */
+        }
+        header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #1a202c;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            letter-spacing: 0.05em;
+            margin-right: 2rem; /* Add some margin to the right of the title */
+        }
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+        .summary-section {
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .summary-card {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .summary-card h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-right: 1rem;
+        }
+        .summary-card p {
+            font-size: 1.5rem;
+            color: #4a5568;
+            font-weight: 700;
+        }
+        .chart-section {
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            min-height: 200px;
+            text-align: center;
+        }
+        #people-list-container {
+            overflow-y: auto;
+            max-height: 400px;
+            margin-top: 1rem;
+            padding: 0.5rem;
+        }
+        .person-card {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .person-card h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a202c;
+        }
+        .progress-bar {
+            background-color: #edf2f7;
+            border-radius: 0.5rem;
+            height: 0.75rem;
+            position: relative;
+            width: 100%;
+        }
+        .progress-bar-fill {
+            background-color: #4CAF50;
+            border-radius: 0.5rem;
+            height: 100%;
+            width: 0;
+            transition: width 0.5s ease;
+        }
+        footer {
+            text-align: center;
+            padding: 1.5rem 0;
+            margin-top: 2rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            border-bottom-left-radius: 1rem;
+            border-bottom-right-radius: 1rem;
+            color: #718096;
+            font-size: 0.9rem;
+        }
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #refresh-button {
+            background-color: #4299e1;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #refresh-button:hover {
+            background-color: #3182ce;
+        }
+
+        #refresh-button:active {
+            background-color: #2b6cb0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-100 to-gray-50 flex justify-center items-center">
+    <div class="container">
+        <header>
+            <h1>Financial Data Dashboard</h1>
+            <button id="refresh-button">Refresh Data</button>
+        </header>
+        <main>
+            <section class="summary-section">
+                <h2>Summary</h2>
+                <div class="summary-card">
+                    <h3>Total Pending Amount:</h3>
+                    <p id="total-pending"></p>
+                </div>
+                <div class="summary-card">
+                    <h3>Total Monthly Commitments:</h3>
+                    <p id="total-monthly-commitments"></p>
+                </div>
+                <div class="summary-card">
+                    <h3>Total People:</h3>
+                    <p id="total-people"></p>
+                </div>
+                <div class="summary-card">
+                    <h3>Average Pending Amount:</h3>
+                    <p id="average-pending"></p>
+                </div>
+                <div class="summary-card">
+                    <h3>Payments Completed:</h3>
+                    <p id="payments-completed"></p>
+                </div>
+                <div class="summary-card">
+                    <h3>Payments In Progress:</h3>
+                    <p id="payments-in-progress"></p>
+                </div>
+                <div id="people-list-container">
+                    <h2>People</h2>
+                    <div id="people-list">
+                    </div>
+                </div>
+            </section>
+            <section class="chart-section">
+                <h2>Payment Progress</h2>
+                <div class="chart-container">
+                    <canvas id="payment-progress-chart"></canvas>
+                </div>
+            </section>
+        </main>
+        <footer>
+            <p>&copy; 2025 Financial Data Dashboard. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+       let dashboardData = {
+            "people": [
+                {
+                    "name": "manthan",
+                    "pending_amount": 34400.0,
+                    "monthly_payment": 1000.0,
+                    "total_months": 10,
+                    "paid_months": 0,
+                    "remaining_months": 10,
+                    "payment_progress_percentage": 0.0
+                },
+                {
+                    "name": "Charlie",
+                    "pending_amount": 1999.0,
+                    "monthly_payment": 1000.0,
+                    "total_months": 2,
+                    "paid_months": 0,
+                    "remaining_months": 2,
+                    "payment_progress_percentage": 0.0
+                },
+                {
+                    "name": "Bob",
+                    "pending_amount": 1500.0,
+                    "monthly_payment": 500.0,
+                    "total_months": 3,
+                    "paid_months": 0,
+                    "remaining_months": 3,
+                    "payment_progress_percentage": 0.0
+                },
+                {
+                    "name": "David",
+                    "pending_amount": 0,
+                    "monthly_payment": 28.0,
+                    "total_months": 0,
+                    "paid_months": 0,
+                    "remaining_months": 0,
+                    "payment_progress_percentage": 0
+                },
+                {
+                    "name": "Eve",
+                    "pending_amount": 0,
+                    "monthly_payment": 32.0,
+                    "total_months": 0,
+                    "paid_months": 0,
+                    "remaining_months": 0,
+                    "payment_progress_percentage": 0
+                },
+                {
+                    "name": "New Data 2",
+                    "pending_amount": 0,
+                    "monthly_payment": 0,
+                    "total_months": 0,
+                    "paid_months": 0,
+                    "remaining_months": 0,
+                    "payment_progress_percentage": 0
+                },
+                {
+                    "name": "allies",
+                    "pending_amount": -14.0,
+                    "monthly_payment": 0,
+                    "total_months": 0,
+                    "paid_months": 0,
+                    "remaining_months": 0,
+                    "payment_progress_percentage": 0
+                },
+                {
+                    "name": "Alice",
+                    "pending_amount": -100.0,
+                    "monthly_payment": 500.0,
+                    "total_months": 2,
+                    "paid_months": 0,
+                    "remaining_months": 2,
+                    "payment_progress_percentage": 0.0
+                },
+                {
+                    "name": "Manee",
+                    "pending_amount": -500.0,
+                    "monthly_payment": 0,
+                    "total_months": 0,
+                    "paid_months": 0,
+                    "remaining_months": 0,
+                    "payment_progress_percentage": 0
+                }
+            ],
+            "total_pending": 37285.0,
+            "total_monthly_commitments": 3000.0,
+            "payment_progress": {
+                "completed": 0,
+                "in_progress": 4
+            },
+            "total_people": 9,
+            "average_pending": 4142.777777777777
+        };
+
+        const totalPendingElement = document.getElementById('total-pending');
+        const totalMonthlyCommitmentsElement = document.getElementById('total-monthly-commitments');
+        const totalPeopleElement = document.getElementById('total-people');
+        const averagePendingElement = document.getElementById('average-pending');
+        const paymentsCompletedElement = document.getElementById('payments-completed');
+        const paymentsInProgressElement = document.getElementById('payments-in-progress');
+        const peopleListElement = document.getElementById('people-list');
+        const refreshButton = document.getElementById('refresh-button');
+
+
+        function updateDashboard(data) {
+            dashboardData = data;
+            totalPendingElement.textContent = `Rs ${dashboardData.total_pending.toFixed(2)}`;
+            totalMonthlyCommitmentsElement.textContent = `Rs ${dashboardData.total_monthly_commitments.toFixed(2)}`;
+            totalPeopleElement.textContent = dashboardData.total_people;
+            averagePendingElement.textContent = `Rs ${dashboardData.average_pending.toFixed(2)}`;
+            paymentsCompletedElement.textContent = dashboardData.payment_progress.completed;
+            paymentsInProgressElement.textContent = dashboardData.payment_progress.in_progress;
+            peopleListElement.innerHTML = '';
+
+            dashboardData.people.forEach(person => {
+                const personCard = document.createElement('div');
+                personCard.className = 'person-card';
+                personCard.innerHTML = `
+                    <h4>${person.name}</h4>
+                    <p>Pending: Rs ${person.pending_amount.toFixed(2)}</p>
+                    <p>Monthly: Rs ${person.monthly_payment.toFixed(2)}</p>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" style="width: ${person.payment_progress_percentage}%"></div>
+                    </div>
+                    <p>${person.paid_months}/${person.total_months} Paid</p>
+                `;
+                peopleListElement.appendChild(personCard);
+            });
+
+            updateChart(dashboardData.payment_progress.completed, dashboardData.payment_progress.in_progress);
+        }
+
+        const ctx = document.getElementById('payment-progress-chart').getContext('2d');
+        let paymentProgressChart;
+
+        function createChart(completed, inProgress) {
+             paymentProgressChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Completed', 'In Progress'],
+                    datasets: [{
+                        label: 'Payment Progress',
+                        data: [completed, inProgress],
+                        backgroundColor: [
+                            'rgba(56, 189, 248, 0.7)',
+                            'rgba(220, 38, 38, 0.7)',
+                        ],
+                        borderColor: [
+                            'rgba(56, 189, 248, 1)',
+                            'rgba(220, 38, 38, 1)',
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Payment Progress',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart(completed, inProgress) {
+            if (paymentProgressChart) {
+                paymentProgressChart.data.datasets[0].data = [completed, inProgress];
+                paymentProgressChart.update();
+            } else {
+                createChart(completed, inProgress);
+            }
+        }
+
+
+        function fetchData() {
+            fetch('http://localhost:8000/dashboard/')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    updateDashboard(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    alert('Failed to fetch data. Please check your network connection and backend server.');
+                });
+        }
+
+        refreshButton.addEventListener('click', fetchData);
+
+        fetchData();
+    </script>
+</body>
+</html>

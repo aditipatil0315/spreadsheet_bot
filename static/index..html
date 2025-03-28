@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spreadsheet Data Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gradient-to-br from-gray-100 to-gray-50 flex justify-center items-center">
+    <div class="container">
+        <header>
+            <h1>Spreadsheet Data Dashboard</h1>
+        </header>
+        <main>
+            <section class="input-section">
+                <h2>Input & Control</h2>
+                <div class="input-area">
+                    <textarea id="message-input" placeholder="Enter your query or speak..." class="border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    <button id="send-button" class="send-button">
+                        <span class="material-symbols-rounded">send</span>
+                    </button>
+                    <button id="speech-button" class="speech-button">
+                        <span class="material-symbols-rounded">mic</span>
+                    </button>
+                </div>
+                <div id="response-area" class="fade-in">
+                    <p>Welcome!  Ask me about your spreadsheet data.</p>
+                </div>
+            </section>
+            <section class="chart-section">
+                <h2>Data Visualization</h2>
+                <div id="chart-container">
+                    <p>Interactive charts will appear here.</p>
+                </div>
+            </section>
+        </main>
+        <footer>
+            <p>&copy; 2025 Spreadsheet Data Dashboard. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const responseArea = document.getElementById('response-area');
+        const speechButton = document.getElementById('speech-button');
+        const chartContainer = document.getElementById('chart-container');
+
+        // --- Speech Recognition ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let isListening = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+        }
+
+        function startSpeechRecognition() {
+            if (!recognition) {
+                alert("Speech recognition is not supported in this browser.");
+                return;
+            }
+            isListening = true;
+            speechButton.classList.add('bg-red-500');
+            speechButton.classList.remove('bg-amber-500');
+            responseArea.innerHTML = `<div class="message-box">Listening...</div>`;
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error("Error starting speech recognition:", error);
+                responseArea.innerHTML = `<div class="message-box error-message">Error: ${error.message}</div>`;
+                isListening = false;
+                speechButton.classList.remove('bg-red-500');
+                speechButton.classList.add('bg-amber-500');
+            }
+        }
+
+        function stopSpeechRecognition() {
+            if (recognition && isListening) {
+                recognition.stop();
+                isListening = false;
+                speechButton.classList.remove('bg-red-500');
+                speechButton.classList.add('bg-amber-500');
+                responseArea.innerHTML = `<div class="message-box">Processing...</div>`;
+            }
+        }
+
+        if (recognition) {
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                messageInput.value = transcript;
+                stopSpeechRecognition();
+                sendButton.click();
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                let errorMessage = "Speech recognition error.";
+                switch (event.error) {
+                    case 'no-speech':
+                        errorMessage = "No speech detected. Please try again.";
+                        break;
+                    case 'aborted':
+                        errorMessage = "Speech recognition aborted.";
+                        break;
+                    case 'network':
+                        errorMessage = "Network error. Please check your internet connection.";
+                        break;
+                    case 'audio-capture':
+                        errorMessage = "Audio capture error. Please make sure your microphone is working.";
+                        break;
+                    case 'not-allowed':
+                        errorMessage = "Speech recognition not allowed. Please allow microphone access in your browser settings.";
+                        break;
+                    case 'service-unavailable':
+                        errorMessage = "Speech service unavailable. Please try again later.";
+                        break;
+                    default:
+                        errorMessage = "Speech recognition error. Please try again.";
+                }
+                responseArea.innerHTML = `<div class="message-box error-message">${errorMessage}</div>`;
+                isListening = false;
+                speechButton.classList.remove('bg-red-500');
+                speechButton.classList.add('bg-amber-500');
+            };
+
+            recognition.onend = () => {
+                if (isListening) {
+                    stopSpeechRecognition();
+                }
+            };
+        }
+
+        speechButton.addEventListener('click', () => {
+            if (isListening) {
+                stopSpeechRecognition();
+            } else {
+                startSpeechRecognition();
+            }
+        });
+
+        // --- Send Message and Fetch Data ---
+        sendButton.addEventListener('click', () => {
+            const message = messageInput.value.trim();
+            if (!message) {
+                responseArea.innerHTML = `<div class="message-box error-message">Please enter a message or speak.</div>`;
+                return;
+            }
+
+            responseArea.innerHTML = `<div class="message-box">Processing...</div>`;
+            chartContainer.innerHTML = '<p>Loading chart...</p>';
+
+            fetch('http://localhost:8000/process_finance_message/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                let responseText = "";
+                if (data && data.detail)
+                {
+                    responseText = `<div class="message-box error-message">Error: ${data.detail}</div>`;
+                    chartContainer.innerHTML = '<p>No chart to display</p>';
+                }
+                else if (data && data.new_balance) {
+                    responseText = `<div class="message-box"><span class="font-semibold text-green-600">New Balance:</span> <span class="text-gray-800">${data.new_balance}</span></div>`;
+                    displayChart(data.new_balance, "New Balance");
+                }
+                else if (data && data.updated_balance)
+                {
+                    responseText = `<div class="message-box"><span class="font-semibold text-blue-600">Updated Balance:</span> <span class="text-gray-800">${data.updated_balance}</span></div>`;
+                    displayChart(data.updated_balance, "Updated Balance");
+                }
+                else if (data && data.pending) {
+                    responseText = `<div class="message-box"><span class="font-semibold text-indigo-600">${data.name}'s pending amount is:</span> <span class="text-red-600">${data.pending}</span></div>`;
+                    displayChart(data.pending, `${data.name}'s Pending Amount`);
+                }
+                else if (data && data.monthly_payment)
+                {
+                    responseText = `<div class="message-box"><span class="font-semibold text-purple-600">${data.name}'s monthly payment is</span> <span class="text-gray-800">${data.monthly_payment}</span> <span class="font-semibold text-purple-600">for</span> <span class="text-gray-800">${data.total_months}</span> <span class="font-semibold text-purple-600">months.</span></div>`;
+                    displayChart(data.monthly_payment, `${data.name}'s Monthly Payment`);
+                }
+                else if (Array.isArray(data)) {
+                    responseText = `<div class="message-box"><span class='font-semibold text-gray-700'>All Balances:</span><div class='mt-2 space-y-2'>`;
+                    let tableHtml = "<table class='min-w-full divide-y divide-gray-200'><thead><tr><th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Name</th><th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Balance</th></tr></thead><tbody class='bg-white divide-y divide-gray-200'>";
+                    data.forEach(row => {
+                        responseText += `<div class='p-3 rounded-md bg-white border border-gray-200'><span class='font-medium'>${row[0]}:</span> <span class='text-blue-700'>${row[1]}</span></div>`;
+                        tableHtml += `<tr><td class='px-6 py-4 whitespace-nowrap'>${row[0]}</td><td class='px-6 py-4 whitespace-nowrap'>${row[1]}</td></tr>`;
+                    });
+                    responseText += "</div></div>";
+                    tableHtml += "</tbody></table>";
+                    chartContainer.innerHTML = tableHtml;
+                }
+                else {
+                    responseText = `<div class="message-box">No specific response received.</div>`;
+                    chartContainer.innerHTML = '<p>No chart to display</p>';
+                }
+                responseArea.innerHTML = responseText;
+                messageInput.value = '';
+                messageInput.focus();
+            })
+            .catch(error => {
+                responseArea.innerHTML = `<div class="message-box error-message">Error: ${error.message}</div>`;
+                chartContainer.innerHTML = '<p>Error loading chart</p>';
+            });
+        });
+
+        messageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendButton.click();
+            }
+        });
+
+        // --- Chart Display (Placeholder) ---
+        function displayChart(data, title) {
+            chartContainer.innerHTML = `<div class="bg-white rounded-md shadow-md p-4 flex items-center justify-center">
+                <h3 class="text-xl font-semibold text-gray-800">${title}</h3>
+                <p class="text-2xl text-blue-600 ml-4">${data}</p>
+                </div>`;
+        }
+    </script>
+</body>
+</html>
